@@ -94,7 +94,7 @@ class B2 {
             var reuse_map  = e_reuse[i].getValue();
             var e_iter_n   = macro Std.int($e_iter_n/key_n);
             var e_header   = macro {
-                trace("\n" + $e_title + " || iterations: " + $e_iter_n + " || Keys: " + key_n );
+                trace("\n\n" + $e_title + " || iterations: " + $e_iter_n + " || Keys: " + key_n );
             };
             var expr = if (reuse_map) macro @:mergeBlock {
                 @:mergeBlock $e_header;
