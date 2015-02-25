@@ -1,9 +1,16 @@
 package ;
 
 import haxe.Timer;
+
+import org.zamedev.lib.FastIteratingStringMap;
+#if js
 import js.Browser;
 import js.html.ButtonElement;
-import org.zamedev.lib.FastIteratingStringMap;
+#end
+#if macro
+import haxe.macro.Context;
+import haxe.macro.Expr;
+#end
 
 typedef BenchmarkResult = {
 	iterations:Int,
@@ -17,6 +24,84 @@ typedef BenchmarkVariant = {
 	name:String,
 	func:BenchmarkFunc,
 };
+
+
+@:publicFields
+class B2 {
+    
+    static var keys:Array<String>;
+    
+    inline static function iter_only(map:Map.IMap<String,Int>){
+        var dummy = 0;
+        for (key in map.keys()) {
+            dummy++;
+        }
+        for (value in map) {
+            dummy++;
+        }
+    }
+    
+    inline static function setgetremove_only(map:Map.IMap<String,Int>){
+        for (key in keys) {
+            map.set(key, 1);
+            map.set(key, map.exists(key) ? (map.get(key) + 1) : 0);
+        }
+        for (key in keys) {
+            map.remove(key);
+        }
+    }
+    
+    inline static function iter_get(map:Map.IMap<String,Int>){
+        var dummy:Int = 0;
+        for (key in map.keys()) {
+            dummy += (map.exists(key) ? map.get(key) : 0);
+        }
+        for (value in map) {
+            dummy++;
+        }
+    }
+    
+    
+    static function run(){
+
+        for (key_n in [10,50,100,250,1000,10000]){
+            var keys = [for (k in 0...key_n) "KX_$k"];
+            var maps = [
+                {map:function():Map.IMap<String,Int> return new FastIteratingStringMap(),msg:"FastIteratingStringMap"},
+                {map:function():Map.IMap<String,Int> return new NewStringMap(),msg:"NewStringMap"}
+            ];
+            var iter_n = 5000;
+            for (m in maps){
+                bench(iter_get,m.map(),m.msg);
+                bench(setgetremove_only,m.map(),m.msg);
+                bench(iter_only,m.map(),m.msg);
+            }
+        }
+         
+    }
+    
+    macro static function bench(e_body:Expr,e_new_map:Expr,e_msg:Expr){
+        var e = macro @:mergeBlock { 
+            var t0 = Timer.stamp();
+            var map = $e_new_map;
+            
+            for(i in 0...iter_n){
+                $e_body(map);
+            }
+            var t1 = Timer.stamp();
+            var t_elapsed = t1 - t0;
+            var i_per_sec = iter_n / t_elapsed;
+            var msg = $e_msg;
+            trace("$msg: time elapsed: $t_elapsed, iterations/s: $i_per_sec");
+        }
+        var s = new haxe.macro.Printer().printExpr(e);
+        trace(s);
+        return e;
+    }
+    
+}
+
+#if js
 
 class Benchmark {
 	private static inline var WARMUP_SECONDS:Int = 1;
@@ -126,6 +211,8 @@ class Benchmark {
 		};
 	}
 
+	
+	
 	// https://github.com/HaxeFoundation/haxe/pull/3743#issuecomment-70280834
 	private static function benchmarkNoIterate(entryCount:Int, createMapFunc:CreatorFunc):BenchmarkResult {
 		var keys:Array<String> = new Array<String>();
@@ -197,7 +284,7 @@ class Benchmark {
 
 		var st:Float = Timer.stamp();
 		var t:Float = 0;
-
+        
 		// warm-up jit
 		while (true) {
 			var dummy:Int = 0;
@@ -320,6 +407,8 @@ class Benchmark {
 	}
 
 	public static function main():Void {
-		Browser.window.setTimeout(init, 1);
+		//Browser.window.setTimeout(init, 1);
+        Browser.window.onload = function(e) B2.run();
 	}
 }
+#end

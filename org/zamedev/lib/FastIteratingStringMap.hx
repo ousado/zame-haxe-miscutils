@@ -246,6 +246,6 @@ class FastIteratingStringMap<T> implements Map.IMap<String, T> {
 
 #else
 
-typedef FastIteratingStringMap = haxe.ds.StringMap;
+typedef FastIteratingStringMap<T> = haxe.ds.StringMap<T>;
 
 #end

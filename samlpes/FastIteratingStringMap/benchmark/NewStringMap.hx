@@ -56,7 +56,10 @@ class NewStringMap<T> implements Map.IMap<String,T> {
 	}
 
 	public inline function set( key : String, value : T ) : Void {
-		if( isReserved(key) )
+        var r = isReserved(key);
+		if ((__keys_cache!=null) && !__exists(key,r))
+            __keys_cache.push(key);
+        if( r )
 			setReserved(key, value);
 		else
 			h[cast key] = value;
@@ -68,6 +71,11 @@ class NewStringMap<T> implements Map.IMap<String,T> {
 		return h[cast key];
 	}
 
+	public inline function __exists(key:String,r:Bool) {
+            if (r) return existsReserved(key);
+        return h.hasOwnProperty(key);
+    }
+	
 	public inline function exists( key : String ) : Bool {
 		if( isReserved(key) )
 			return existsReserved(key);
@@ -88,7 +96,11 @@ class NewStringMap<T> implements Map.IMap<String,T> {
 		return untyped rh.hasOwnProperty("$"+key);
 	}
 
+	
+	
+	
 	public function remove( key : String ) : Bool {
+        __keys_cache = null;
 		if( isReserved(key) ) {
 			key = "$" + key;
 			if( rh == null || !rh.hasOwnProperty(key) ) return false;
@@ -106,8 +118,11 @@ class NewStringMap<T> implements Map.IMap<String,T> {
 		return arrayKeys().iterator();
 	}
 
+	var __keys_cache:Array<String>;
 	function arrayKeys() : Array<String> {
 		var out = [];
+        if (__keys_cache != null )
+                return __keys_cache;
 		untyped {
 			__js__("for( var key in this.h ) {");
 				if( h.hasOwnProperty(key) )
@@ -120,6 +135,7 @@ class NewStringMap<T> implements Map.IMap<String,T> {
 					out.push(key.substr(1));
 			__js__("}");
 		}
+		__keys_cache = out;
 		return out;
 	}
 
@@ -144,7 +160,9 @@ class NewStringMap<T> implements Map.IMap<String,T> {
 	}
 
 	static function __init__() : Void {
+        #if js
 		untyped __js__("var __map_reserved = {}");
+        #end
 	}
 
 }
