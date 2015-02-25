@@ -6,6 +6,7 @@ import org.zamedev.lib.FastIteratingStringMap;
 #if macro
 import haxe.macro.Context;
 import haxe.macro.Expr;
+using haxe.macro.ExprTools;
 #end
 
 
@@ -60,38 +61,64 @@ class B2 {
                 
             ];
             var iter_n = 1000000;
+            var iter_n_slow = 10000;
             trace('KEYS: $key_n');
             trace('-- iter exists get');
-            untyped global.gc();
-            for (m in maps){
-                var map = fill(m.map());
-                bench(iter_get,map,m.msg);
-            }
-            trace('-- iter only');
-            untyped global.gc();
-            for (m in maps){
-                var map = fill(m.map());
-                bench(iter_only,map,m.msg);
-            }
-            trace('-- set exists get remove');
-            untyped global.gc();
-            var iter_n = 500;
-            for (m in maps){
-                var map = m.map();
-                bench(setgetremove_only,map,m.msg);
-            }
-            trace('-- fill ');
-            untyped global.gc();
-            for (m in maps){
-                //var map = m.map();
-                bench(fill,m.map(),m.msg);
-            }
-            trace('--');
+            
+            bench(['iter exists get','iter only','set exists get remove','fill'      ], // bench type
+                  [iter_get,          iter_only,  setgetremove_only,      fill       ], // inner loop body
+                  [true    ,          true,       true,                   false      ], // reuse map
+                  [iter_n,            iter_n,     iter_n_slow,            iter_n_slow]  // iterations == (keys_n * outer_loop)
+            );
         }
          
     }
     
-    macro static function bench(e_body:Expr,e_new_map:Expr,e_msg:Expr){
+    #if macro
+        static function get_expr_arr(e_arr:Expr) return switch e_arr.expr {
+            case EArrayDecl(arr):arr;
+            case _:throw "invalid expression, expected array";
+        }
+    #end
+    
+    macro static function bench(e_titles:Expr,e_bodies:Expr,e_reuse_map_flags:Expr,e_iterations:Expr){
+        
+        var e_titles = get_expr_arr(e_titles);
+        var e_bodies = get_expr_arr(e_bodies);
+        var e_reuse  = get_expr_arr(e_reuse_map_flags);
+        var e_iterations = get_expr_arr(e_iterations);
+        var e_arr = [for (i in 0...e_titles.length){
+            var e_title    = e_titles[i];
+            var e_body     = e_bodies[i];
+            var e_iter_n   = e_iterations[i];
+            var reuse_map  = e_reuse[i].getValue();
+            
+            var e_header   = macro @:mergeBlock {
+                var iter_n = Std.int($e_iter_n/key_n);
+                trace($e_title + " iterations: " + iter_n );
+                
+            };
+            var expr = if (reuse_map) macro @:mergeBlock {
+                $e_header;
+                for (m in maps) {
+                    var map = m.map();
+                    bench_inner($e_body,map,m.msg);
+                }
+            } else macro @:mergeBlock {
+                $e_header;
+                for (m in maps) {
+                    bench_inner($e_body,m.map(),m.msg);
+                }
+            };
+            expr;
+        }];
+        var e_benchmarks = macro $b{e_arr};
+        //var s = new haxe.macro.Printer().printExpr(e_benchmarks);
+        //trace(s);
+        return e_benchmarks;
+    }
+    
+    macro static function bench_inner(e_body:Expr,e_new_map:Expr,e_msg:Expr){
         var e = macro @:mergeBlock { 
             var t0 = Timer.stamp();
             var map = $e_new_map;
