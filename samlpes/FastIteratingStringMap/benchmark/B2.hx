@@ -60,15 +60,15 @@ class B2 {
                 {map:function():Map.IMap<String,Int> return new FastIteratingStringMap(),msg:"FastIteratingStringMap"}
                 
             ];
-            var iter_N = 1000000;
-            var iter_N_slow = 10000;
+            var iter_N = 100000000;
+            var iter_N_slow = 1000000;
             trace('KEYS: $key_n');
             trace('-- iter exists get');
             
-            bench(['iter exists get','iter only','set exists get remove','fill'      ], // bench type
-                  [iter_get,          iter_only,  setgetremove_only,      fill       ], // inner loop body
-                  [true    ,          true,       true,                   false      ], // reuse map
-                  [iter_N,            iter_N,     iter_N,                 iter_N     ]  // iterations == (keys_n * outer_loop)
+            bench(['iter exists get      ','iter only            ','set exists get remove','fill                 '      ], // bench type
+                  [iter_get,               iter_only,               setgetremove_only,      fill       ], // inner loop body
+                  [true    ,               true,                    true,                   false      ], // reuse map
+                  [iter_N,                 iter_N,                  iter_N_slow,            iter_N_slow]  // iterations == (keys_n * outer_loop)
             );
         }
          
@@ -94,7 +94,7 @@ class B2 {
             var reuse_map  = e_reuse[i].getValue();
             var e_iter_n   = macro Std.int($e_iter_n/key_n);
             var e_header   = macro {
-                trace("\n\n" + $e_title + " || iterations: " + $e_iter_n + " || Keys: " + key_n );
+                trace("\n\n" + $e_title + " : iterations: " + $e_iter_n + " || map size: " + key_n );
             };
             var expr = if (reuse_map) macro @:mergeBlock {
                 @:mergeBlock $e_header;
