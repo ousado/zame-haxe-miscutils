@@ -61,12 +61,6 @@ class B2 {
             ];
             var iter_n = 1000000;
             trace('KEYS: $key_n');
-            trace('-- fill ');
-            untyped global.gc();
-            for (m in maps){
-                //var map = m.map();
-                bench(fill,m.map(),m.msg);
-            }
             trace('-- iter exists get');
             untyped global.gc();
             for (m in maps){
@@ -86,7 +80,12 @@ class B2 {
                 var map = m.map();
                 bench(setgetremove_only,map,m.msg);
             }
-            trace('--');
+            trace('-- fill ');
+            untyped global.gc();
+            for (m in maps){
+                //var map = m.map();
+                bench(fill,m.map(),m.msg);
+            }
             trace('--');
         }
          
@@ -108,7 +107,7 @@ class B2 {
             trace(s);
         }
         var s = new haxe.macro.Printer().printExpr(e);
-        trace(s);
+        //trace(s);
         return e;
     }
     
